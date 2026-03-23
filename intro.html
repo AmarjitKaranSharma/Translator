@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Real-Time Speech-to-Speech Translation System</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #090d12;
+    --surface: #0f1621;
+    --surface2: #151d2b;
+    --border: #1e2d42;
+    --accent: #00d4ff;
+    --accent2: #7b61ff;
+    --accent3: #00ff9d;
+    --accent4: #ff6b35;
+    --accent5: #ffd700;
+    --text: #e8edf5;
+    --muted: #6b7f99;
+    --low: #00ff9d;
+    --med: #ffd700;
+    --high: #ff6b35;
+    --very-high: #ff3860;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    min-width: 1200px;
+  }
+
+  /* ── HEADER ───────────────────────────────────────────── */
+  .header {
+    position: relative;
+    padding: 56px 60px 44px;
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .header-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.3;
+  }
+
+  .header-glow {
+    position: absolute;
+    top: -80px; left: -60px;
+    width: 500px; height: 300px;
+    background: radial-gradient(ellipse, rgba(0,212,255,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .header-glow2 {
+    position: absolute;
+    bottom: -60px; right: 80px;
+    width: 400px; height: 250px;
+    background: radial-gradient(ellipse, rgba(123,97,255,0.10) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .header-content { position: relative; z-index: 1; }
+
+  .doc-tag {
+    display: inline-block;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid rgba(0,212,255,0.35);
+    padding: 4px 14px;
+    margin-bottom: 20px;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    line-height: 1.15;
+    max-width: 780px;
+    margin-bottom: 20px;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .meta-row {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+
+  .meta-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .meta-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent3);
+    flex-shrink: 0;
+  }
+
+  /* ── SECTION ──────────────────────────────────────────── */
+  .section {
+    margin: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 60px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .section-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    opacity: 0.7;
+  }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 0.03em;
+  }
+
+  .section-badge {
+    margin-left: auto;
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: 2px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .badge-blue  { background: rgba(0,212,255,0.12); color: var(--accent);  border: 1px solid rgba(0,212,255,0.25); }
+  .badge-purple{ background: rgba(123,97,255,0.12); color: var(--accent2); border: 1px solid rgba(123,97,255,0.25); }
+  .badge-green { background: rgba(0,255,157,0.10); color: var(--accent3); border: 1px solid rgba(0,255,157,0.22); }
+  .badge-orange{ background: rgba(255,107,53,0.12); color: var(--accent4); border: 1px solid rgba(255,107,53,0.25); }
+  .badge-gold  { background: rgba(255,215,0,0.10);  color: var(--accent5); border: 1px solid rgba(255,215,0,0.22); }
+  .badge-gray  { background: rgba(107,127,153,0.15);color: var(--muted);  border: 1px solid rgba(107,127,153,0.25); }
+
+  /* ── TABLE ────────────────────────────────────────────── */
+  .table-wrap { overflow-x: auto; padding: 0 60px 0; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead tr {
+    background: var(--surface2);
+    border-bottom: 2px solid var(--border);
+  }
+
+  th {
+    padding: 12px 14px;
+    text-align: left;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 14px 14px;
+    vertical-align: top;
+    border-bottom: 1px solid rgba(30,45,66,0.6);
+    color: var(--text);
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+
+  tbody tr:hover td { background: rgba(255,255,255,0.018); }
+
+  tbody tr:last-child td { border-bottom: none; }
+
+  /* first column emphasis */
+  td:first-child {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text);
+    white-space: nowrap;
+    padding-right: 20px;
+  }
+
+  .desc { color: var(--text); }
+  .tech { color: #9ecfea; }
+  .alt  { color: var(--muted); font-style: italic; }
+  .notes{ color: #8fa8c4; }
+
+  /* complexity pills */
+  .pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 2px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .pill-low      { background: rgba(0,255,157,0.12); color: var(--low);  border: 1px solid rgba(0,255,157,0.3); }
+  .pill-medium   { background: rgba(255,215,0,0.12);  color: var(--med);  border: 1px solid rgba(255,215,0,0.3); }
+  .pill-high     { background: rgba(255,107,53,0.14); color: var(--high); border: 1px solid rgba(255,107,53,0.3); }
+  .pill-veryhigh { background: rgba(255,56,96,0.14);  color: var(--very-high); border: 1px solid rgba(255,56,96,0.3); }
+
+  /* icon dots in module names */
+  .mod-icon {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    margin-right: 8px;
+    flex-shrink: 0;
+    vertical-align: middle;
+    position: relative; top: -1px;
+  }
+
+  .col-mod  { width: 14%; }
+  .col-desc { width: 20%; }
+  .col-tech { width: 18%; }
+  .col-alt  { width: 14%; }
+  .col-cmpl { width: 9%; }
+  .col-note { width: 25%; }
+
+  /* tradeoff highlight */
+  .tradeoff {
+    display: inline-block;
+    background: rgba(123,97,255,0.12);
+    border-left: 2px solid var(--accent2);
+    padding: 2px 8px;
+    font-size: 11px;
+    color: #b09fff;
+    margin-top: 4px;
+  }
+
+  /* ── FOOTER ───────────────────────────────────────────── */
+  .footer {
+    padding: 28px 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+  }
+
+  .footer-left { font-size: 11px; color: var(--muted); }
+  .footer-left strong { color: var(--accent); }
+
+  .legend {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+  }
+
+  .legend-label { font-size: 10px; color: var(--muted); margin-right: 6px; letter-spacing: 0.1em; text-transform: uppercase; }
+
+  /* spacer between sections */
+  .section + .section { border-top: 0; }
+
+  /* section bottom padding */
+  .table-wrap { padding-bottom: 12px; }
+
+  ul.tech-list {
+    list-style: none;
+    padding: 0;
+  }
+  ul.tech-list li::before {
+    content: '▸ ';
+    color: var(--accent);
+    font-size: 10px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════
+     HEADER
+════════════════════════════════════════════════════ -->
+<div class="header">
+  <div class="header-grid"></div>
+  <div class="header-glow"></div>
+  <div class="header-glow2"></div>
+  <div class="header-content">
+    <div class="doc-tag">System Design Document · v1.0</div>
+    <h1>Real-Time <span>Speech-to-Speech</span><br>Translation System</h1>
+    <div class="meta-row">
+      <div class="meta-item"><div class="meta-dot"></div>Browser Extension (Chrome) + Desktop App (Electron)</div>
+      <div class="meta-item"><div class="meta-dot" style="background:var(--accent2)"></div>AI-Powered · Multi-Language · Low Latency</div>
+      <div class="meta-item"><div class="meta-dot" style="background:var(--accent4)"></div>Full-Stack · React · Node.js · Python</div>
+      <div class="meta-item"><div class="meta-dot" style="background:var(--accent5)"></div>6 Sections · 30+ Components Mapped</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════
+     SECTION 1 — CORE FEATURES
+════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">01</span>
+    <span class="section-title">Core Features</span>
+    <span class="section-badge badge-blue">Foundation Layer</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="col-mod">Module / Feature</th>
+          <th class="col-desc">Description</th>
+          <th class="col-tech">Recommended Technologies</th>
+          <th class="col-alt">Alternatives</th>
+          <th class="col-cmpl">Complexity</th>
+          <th class="col-note">Notes & Trade-offs</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent)"></span>Speech Recognition</td>
+          <td class="desc">Captures microphone input and converts spoken words into text in real-time with streaming output.</td>
+          <td class="tech">Web Speech API (browser), OpenAI Whisper (server-side)</td>
+          <td class="alt">Azure Speech SDK, Deepgram, AssemblyAI</td>
+          <td><span class="pill pill-medium">Medium</span></td>
+          <td class="notes">Web Speech API is free & zero-latency but English-biased. Whisper offers 99-language support but adds 200–800ms server round-trip. <span class="tradeoff">Trade-off: accuracy vs. latency</span></td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent2)"></span>Language Translation</td>
+          <td class="desc">Translates recognized source-language text into the target language with context awareness.</td>
+          <td class="tech">Google Cloud Translation API v3, DeepL API</td>
+          <td class="alt">Microsoft Translator, LibreTranslate (self-hosted), NLLB-200</td>
+          <td><span class="pill pill-medium">Medium</span></td>
+          <td class="notes">Google supports 133 languages; DeepL produces more natural prose but covers only 31 languages. NLLB-200 is open-source for offline use. <span class="tradeoff">Trade-off: cost vs. language breadth</span></td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent3)"></span>Text-to-Speech (TTS)</td>
+          <td class="desc">Synthesizes translated text into natural-sounding audio in the target language and plays it back.</td>
+          <td class="tech">Web Speech Synthesis API, Google TTS (WaveNet), ElevenLabs</td>
+          <td class="alt">Azure Neural TTS, AWS Polly, Coqui TTS (FOSS)</td>
+          <td><span class="pill pill-medium">Medium</span></td>
+          <td class="notes">Web Speech Synthesis is zero-cost but robotic. WaveNet/ElevenLabs produce near-human audio at ~$0.004/char. Coqui runs offline. <span class="tradeoff">Trade-off: voice quality vs. cost</span></td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent4)"></span>Real-Time Streaming Pipeline</td>
+          <td class="desc">End-to-end streaming from mic capture → STT → translation → TTS with sub-second perceived latency.</td>
+          <td class="tech">WebSockets (Socket.IO), WebRTC data channels, Node.js streams</td>
+          <td class="alt">gRPC bidirectional streaming, SSE (Server-Sent Events)</td>
+          <td><span class="pill pill-high">High</span></td>
+          <td class="notes">Segment-level streaming (word-by-word) reduces perceived delay. Requires careful buffer management and voice activity detection (VAD) to avoid mid-sentence cuts.</td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent5)"></span>Voice Activity Detection</td>
+          <td class="desc">Detects when the user starts/stops speaking to trigger processing without manual push-to-talk.</td>
+          <td class="tech">WebRTC VAD (js-vad), Silero VAD (Python)</td>
+          <td class="alt">RNNoise, Google WebRTC VAD binary</td>
+          <td><span class="pill pill-medium">Medium</span></td>
+          <td class="notes">Critical for hands-free operation. Silero VAD achieves &lt;5ms per frame on CPU. Must handle background noise gracefully.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════
+     SECTION 2 — FUNCTIONAL REQUIREMENTS
+════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">02</span>
+    <span class="section-title">Functional Requirements</span>
+    <span class="section-badge badge-purple">Behavior Specification</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="col-mod">Requirement</th>
+          <th class="col-desc">Description</th>
+          <th class="col-tech">Implementation Approach</th>
+          <th class="col-alt">Fallback Strategy</th>
+          <th class="col-cmpl">Complexity</th>
+          <th class="col-note">Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent)"></span>Language Pair Selection</td>
+          <td class="desc">User selects source and target languages via UI dropdown before or during a session.</td>
+          <td class="tech">React Select component; config persisted in chrome.storage.sync</td>
+          <td class="alt">Auto-detect source language via Lingua or langdetect</td>
+          <td><span class="pill pill-low">Low</span></td>
+          <td class="notes">Auto-detection adds 50–100ms. Expose as opt-in toggle. Store last-used pair for convenience.</td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent2)"></span>Session Management</td>
+          <td class="desc">Start/stop/pause translation sessions; display live transcripts and translation history.</td>
+          <td class="tech">React state + Context API; session logs in IndexedDB</td>
+          <td class="alt">Zustand / Redux for complex session state</td>
+          <td><span class="pill pill-medium">Medium</span></td>
+          <td class="notes">Transcript history enables review and export. Implement clear-session and export-as-TXT buttons.</td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent3)"></span>Overlay / HUD Mode</td>
+          <td class="desc">Render translated subtitle overlay on top of any active browser tab or video call.</td>
+          <td class="tech">Chrome Content Script injecting a shadow-DOM overlay</td>
+          <td class="alt">Browser side panel (Chrome 114+)</td>
+          <td><span class="pill pill-high">High</span></td>
+          <td class="notes">Shadow DOM prevents CSS bleed. Must handle z-index conflicts with sites like YouTube, Zoom web client, and Google Meet.</td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent4)"></span>Audio Output Routing</td>
+          <td class="desc">Play translated audio through default speakers or a virtual audio device selectable by the user.</td>
+          <td class="tech">Web Audio API; AudioContext with gain node; Electron shell.openItem for virtual devices</td>
+          <td class="alt">VB-Cable / BlackHole for virtual routing in desktop mode</td>
+          <td><span class="pill pill-high">High</span></td>
+          <td class="notes">Virtual audio routing is essential for use with video conferencing apps. Requires elevated OS permissions on desktop.</td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent5)"></span>Offline / Local Mode</td>
+          <td class="desc">Operate without internet using locally-bundled models for limited language pairs.</td>
+          <td class="tech">Whisper.cpp (WASM build), NLLB-200 quantized (ONNX Runtime), Piper TTS</td>
+          <td class="alt">Vosk, Opus-MT (Helsinki-NLP), edge-tts (offline)</td>
+          <td><span class="pill pill-veryhigh">Very High</span></td>
+          <td class="notes">Models are 100MB–1.5GB per language pair. Suitable only for desktop app; not feasible in browser extension without a local companion app.</td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--muted)"></span>Transcript Export</td>
+          <td class="desc">Export session transcripts (original + translated) as TXT, SRT, or JSON files.</td>
+          <td class="tech">Blob API (browser); fs module (Electron/Node.js)</td>
+          <td class="alt">Copy-to-clipboard fallback</td>
+          <td><span class="pill pill-low">Low</span></td>
+          <td class="notes">SRT format enables direct subtitle embedding in video files. JSON enables downstream processing.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════
+     SECTION 3 — NON-FUNCTIONAL REQUIREMENTS
+════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">03</span>
+    <span class="section-title">Non-Functional Requirements</span>
+    <span class="section-badge badge-green">Quality Attributes</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="col-mod">Attribute</th>
+          <th class="col-desc">Target / Goal</th>
+          <th class="col-tech">Strategy / Approach</th>
+          <th class="col-alt">Measurement Tool</th>
+          <th class="col-cmpl">Complexity</th>
+          <th class="col-note">Notes & Considerations</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent3)"></span>End-to-End Latency</td>
+          <td class="desc">Target: &lt;1.5s for cloud mode; &lt;3s for local model mode.</td>
+          <td class="tech">Streaming STT + chunked translation + async TTS prefetch</td>
+          <td class="alt">WebRTC stats API; custom telemetry dashboard</td>
+          <td><span class="pill pill-high">High</span></td>
+          <td class="notes">Pipeline latency = STT (~200ms) + Translation (~100ms) + TTS (~300ms). Edge servers (Cloudflare Workers) can reduce RTT significantly for global users.</td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent)"></span>Accuracy</td>
+          <td class="desc">WER (Word Error Rate) &lt; 10% for standard accents; BLEU score &gt; 30 for translation.</td>
+          <td class="tech">Whisper Large-v3 for STT; DeepL / GPT-4o for translation</td>
+          <td class="alt">jiwer (WER), sacrebleu (BLEU), manual evaluation</td>
+          <td><span class="pill pill-high">High</span></td>
+          <td class="notes">Accuracy degrades with heavy accents, background noise, and technical vocabulary. Domain-specific fine-tuning of Whisper improves results by 15–30%.</td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent2)"></span>Scalability</td>
+          <td class="desc">Support 1,000+ concurrent sessions without degradation.</td>
+          <td class="tech">Auto-scaling Node.js cluster; GPU inference workers (Python FastAPI); Redis pub/sub</td>
+          <td class="alt">AWS ECS / GCP Cloud Run; k8s HPA</td>
+          <td><span class="pill pill-veryhigh">Very High</span></td>
+          <td class="notes">Whisper GPU inference costs ~$0.006/min on A10G GPU. Consider batching short requests. STT is the primary bottleneck at scale.</td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent4)"></span>Privacy & Security</td>
+          <td class="desc">No audio stored server-side; all data encrypted in transit; GDPR compliant.</td>
+          <td class="tech">TLS 1.3; ephemeral audio buffers; no-log policy; optional on-device processing</td>
+          <td class="alt">Differential privacy for telemetry; SOC 2 audit</td>
+          <td><span class="pill pill-high">High</span></td>
+          <td class="notes">Medical / legal use requires HIPAA considerations. Consider explicitly advertising "audio not stored" as a trust signal in extension store listing.</td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent5)"></span>Reliability</td>
+          <td class="desc">99.5% uptime; graceful degradation on API failures.</td>
+          <td class="tech">Multi-provider fallback chain (Google → DeepL → LibreTranslate); circuit breaker pattern</td>
+          <td class="alt">Uptime monitoring via Betterstack or Pingdom</td>
+          <td><span class="pill pill-medium">Medium</span></td>
+          <td class="notes">Implement exponential backoff on API errors. Show user-friendly error states, not raw exceptions.</td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--muted)"></span>Accessibility</td>
+          <td class="desc">WCAG 2.1 AA compliance; keyboard-navigable UI; high contrast mode.</td>
+          <td class="tech">ARIA roles; Radix UI primitives; CSS prefers-color-scheme</td>
+          <td class="alt">axe DevTools; Lighthouse audit</td>
+          <td><span class="pill pill-low">Low</span></td>
+          <td class="notes">Deaf users may rely on transcript-only mode; ensure TTS can be disabled without losing translation functionality.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════
+     SECTION 4 — SYSTEM COMPONENTS
+════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">04</span>
+    <span class="section-title">System Components</span>
+    <span class="section-badge badge-orange">Architecture</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="col-mod">Component</th>
+          <th class="col-desc">Role & Responsibility</th>
+          <th class="col-tech">Recommended Technologies</th>
+          <th class="col-alt">Alternatives</th>
+          <th class="col-cmpl">Complexity</th>
+          <th class="col-note">Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent4)"></span>Chrome Extension (Frontend)</td>
+          <td class="desc">Popup UI, content script for overlay injection, background service worker for persistent WebSocket.</td>
+          <td class="tech">React 18 + Vite (popup UI); Manifest V3; chrome.* APIs</td>
+          <td class="alt">Plasmo framework (streamlines MV3 dev); WXT</td>
+          <td><span class="pill pill-high">High</span></td>
+          <td class="notes">MV3 restricts persistent background pages — use service workers with keepalive pings. Popup must be &lt;5MB total bundle size for Chrome Web Store.</td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent)"></span>Desktop App Shell</td>
+          <td class="desc">Cross-platform desktop wrapper providing OS-level mic access, system tray, and global hotkeys.</td>
+          <td class="tech">Electron 30 with contextIsolation; ipcMain/ipcRenderer for IPC</td>
+          <td class="alt">Tauri (Rust, smaller bundle, ~600KB vs ~80MB)</td>
+          <td><span class="pill pill-high">High</span></td>
+          <td class="notes">Tauri is increasingly mature and drastically smaller, but requires Rust knowledge. Electron ships Chromium (~80MB overhead) but enables web-tech-only development. <span class="tradeoff">Trade-off: bundle size vs. dev velocity</span></td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent2)"></span>API Gateway / Backend</td>
+          <td class="desc">Routes STT, translation, and TTS requests; manages auth tokens; rate limits; logs telemetry.</td>
+          <td class="tech">Node.js (Express / Fastify) or Python (FastAPI); API key management via Vault / env secrets</td>
+          <td class="alt">BFF (Backend for Frontend) pattern; Hono.js (edge-ready)</td>
+          <td><span class="pill pill-medium">Medium</span></td>
+          <td class="notes">Never expose third-party API keys to the frontend. Backend acts as secure proxy. FastAPI is preferred for ML model integration due to Python ecosystem.</td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent3)"></span>STT Inference Worker</td>
+          <td class="desc">Runs Whisper model inference for high-accuracy speech recognition on audio chunks received via WebSocket.</td>
+          <td class="tech">Python FastAPI + faster-whisper (CTranslate2); CUDA-enabled GPU worker</td>
+          <td class="alt">Groq API (hosted Whisper, ultra-fast); Replicate (serverless GPU)</td>
+          <td><span class="pill pill-high">High</span></td>
+          <td class="notes">faster-whisper is 4x faster than original Whisper with same accuracy. Use Whisper-large-v3 for accuracy, Whisper-tiny for speed. Quantize to INT8 for CPU deployment.</td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent5)"></span>WebSocket Server</td>
+          <td class="desc">Maintains bidirectional real-time connection between client and backend for audio streaming and result delivery.</td>
+          <td class="tech">Socket.IO (Node.js); or raw ws library for lower overhead</td>
+          <td class="alt">WebTransport (QUIC-based, draft standard); gRPC-Web</td>
+          <td><span class="pill pill-medium">Medium</span></td>
+          <td class="notes">Socket.IO adds fallback polling which is not needed here — raw ws is ~40% lower overhead. Use rooms for session isolation.</td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--muted)"></span>Cache & State Layer</td>
+          <td class="desc">Caches frequently translated phrases; stores user preferences and session state.</td>
+          <td class="tech">Redis (server-side phrase cache); IndexedDB / chrome.storage (client-side)</td>
+          <td class="alt">Upstash Redis (serverless); Dexie.js (IndexedDB wrapper)</td>
+          <td><span class="pill pill-low">Low</span></td>
+          <td class="notes">Phrase-level caching can reduce translation API costs by 20–40% for repetitive content (meetings, presentations). TTL of 24h recommended.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════
+     SECTION 5 — TECHNOLOGY STACK
+════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">05</span>
+    <span class="section-title">Technology Stack</span>
+    <span class="section-badge badge-gold">Implementation</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="col-mod">Layer</th>
+          <th class="col-desc">Purpose</th>
+          <th class="col-tech">Primary Choice</th>
+          <th class="col-alt">Alternatives</th>
+          <th class="col-cmpl">Complexity</th>
+          <th class="col-note">Key Rationale</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent5)"></span>Frontend UI</td>
+          <td class="desc">Component-based UI for extension popup, desktop app renderer, and overlay panels.</td>
+          <td class="tech">React 18 + TypeScript + Tailwind CSS + Vite</td>
+          <td class="alt">Svelte 5 (lighter bundle), Solid.js (fine-grained reactivity)</td>
+          <td><span class="pill pill-low">Low</span></td>
+          <td class="notes">React's ecosystem (shadcn/ui, Radix) accelerates UI development. TypeScript enforces API contracts between IPC layers. Svelte produces 30% smaller bundles — worth considering for extension. <span class="tradeoff">Trade-off: ecosystem size vs. bundle weight</span></td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent)"></span>Speech Recognition</td>
+          <td class="desc">Convert audio stream to text.</td>
+          <td class="tech">Web Speech API (browser); OpenAI Whisper via faster-whisper (server)</td>
+          <td class="alt">Deepgram Nova-2 API; Azure Speech SDK; Vosk (offline)</td>
+          <td><span class="pill pill-medium">Medium</span></td>
+          <td class="notes">Hybrid strategy: use Web Speech API for &lt;2s chunks (zero latency), fall back to Whisper for accuracy-critical sessions. Deepgram Nova-2 offers streaming at ~300ms with excellent accuracy.</td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent2)"></span>Translation Engine</td>
+          <td class="desc">Convert source-language text to target language.</td>
+          <td class="tech">Google Cloud Translation API v3 (NMT) + DeepL API (prose quality)</td>
+          <td class="alt">Microsoft Translator; Meta NLLB-200 (self-hosted); GPT-4o (contextual)</td>
+          <td><span class="pill pill-low">Low</span></td>
+          <td class="notes">Route technical/medical text to GPT-4o for contextual accuracy. Use Google/DeepL for general speech. Cost: Google ~$20/1M chars; DeepL ~$25/1M chars; GPT-4o ~$150/1M tokens.</td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent3)"></span>Text-to-Speech</td>
+          <td class="desc">Synthesize translated text to spoken audio.</td>
+          <td class="tech">Google TTS (WaveNet/Neural2); ElevenLabs (ultra-realism)</td>
+          <td class="alt">Azure Neural TTS; AWS Polly; Web Speech Synthesis API; Piper (offline)</td>
+          <td><span class="pill pill-medium">Medium</span></td>
+          <td class="notes">ElevenLabs produces most natural output but at premium cost (~$0.30/1K chars). Google Neural2 balances quality and cost. Web Speech Synthesis API is free and instant but robotic. Use streaming TTS endpoints to reduce perceived latency.</td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent4)"></span>Backend Runtime</td>
+          <td class="desc">Handle API proxying, WebSocket connections, STT workers, and business logic.</td>
+          <td class="tech">Node.js (Fastify) for API gateway; Python (FastAPI) for ML inference</td>
+          <td class="alt">Go (Gin) for ultra-high throughput; Bun.js (faster Node alternative)</td>
+          <td><span class="pill pill-medium">Medium</span></td>
+          <td class="notes">Split architecture is recommended: Node.js for I/O-heavy WebSocket handling; Python for CPU/GPU-intensive Whisper inference. Communicate via Redis streams or gRPC.</td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--muted)"></span>Desktop Packaging</td>
+          <td class="desc">Bundle frontend + backend into a distributable cross-platform desktop app.</td>
+          <td class="tech">Electron 30 + electron-builder (auto-update via electron-updater)</td>
+          <td class="alt">Tauri 2 (Rust; smaller, faster, more secure); NW.js</td>
+          <td><span class="pill pill-high">High</span></td>
+          <td class="notes">Electron allows shipping a bundled local Python server (child_process). Tauri requires Rust integration for native calls. Code-sign on both macOS (Notarization) and Windows (EV cert) for distribution.</td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent)"></span>Audio Processing</td>
+          <td class="desc">Capture, process, resample, and encode audio for STT pipeline input.</td>
+          <td class="tech">Web Audio API (AudioWorklet); ffmpeg (server-side resampling)</td>
+          <td class="alt">PortAudio (desktop); Sox (CLI audio processing)</td>
+          <td><span class="pill pill-medium">Medium</span></td>
+          <td class="notes">Whisper expects 16kHz mono WAV/PCM. AudioWorklet processes audio off the main thread avoiding UI jank. Apply noise suppression (RNNoise) before sending to STT.</td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent2)"></span>DevOps & Deployment</td>
+          <td class="desc">CI/CD, containerization, and cloud deployment of backend services.</td>
+          <td class="tech">Docker + GitHub Actions; deployed to GCP Cloud Run or AWS ECS Fargate</td>
+          <td class="alt">Railway (simpler); Fly.io (low-latency edge); Render</td>
+          <td><span class="pill pill-medium">Medium</span></td>
+          <td class="notes">Use multi-stage Docker builds to keep image size under 500MB. Deploy GPU workers separately on GCP A2 or RunPod. Use Terraform for infra-as-code.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════
+     SECTION 6 — OPTIONAL ADVANCED FEATURES
+════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">06</span>
+    <span class="section-title">Optional Advanced Features</span>
+    <span class="section-badge badge-gray">Enhancement Roadmap</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="col-mod">Feature</th>
+          <th class="col-desc">Description</th>
+          <th class="col-tech">Recommended Technologies</th>
+          <th class="col-alt">Alternatives</th>
+          <th class="col-cmpl">Complexity</th>
+          <th class="col-note">Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent)"></span>Speaker Diarization</td>
+          <td class="desc">Identify and label different speakers in a multi-party conversation (Speaker A, Speaker B).</td>
+          <td class="tech">pyannote.audio; AWS Transcribe (built-in diarization)</td>
+          <td class="alt">Rev.ai; Deepgram diarization parameter</td>
+          <td><span class="pill pill-veryhigh">Very High</span></td>
+          <td class="notes">Enables conference call translation with per-speaker subtitles. Adds ~500ms additional latency. Requires speaker enrollment or zero-shot models.</td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent2)"></span>Voice Cloning / Persona</td>
+          <td class="desc">Synthesize translated speech in the original speaker's voice style for natural continuity.</td>
+          <td class="tech">ElevenLabs Voice Cloning API; Coqui XTTS-v2 (open-source)</td>
+          <td class="alt">OpenVoice (MIT license); StyleTTS2</td>
+          <td><span class="pill pill-veryhigh">Very High</span></td>
+          <td class="notes">Requires ~30s voice sample for cloning. Raises significant ethical concerns around consent and deepfake potential. Implement only with explicit user consent workflows.</td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent3)"></span>Emotion / Tone Preservation</td>
+          <td class="desc">Detect emotional tone (excited, calm, questioning) in source speech and replicate in TTS output.</td>
+          <td class="tech">SpeechBrain (emotion classification); Cartesia AI (expressive TTS)</td>
+          <td class="alt">Hume AI (emotion voice API)</td>
+          <td><span class="pill pill-veryhigh">Very High</span></td>
+          <td class="notes">Current research-grade; limited language support. Adds ~200ms. Improves naturalness significantly in emotional contexts like negotiations or presentations.</td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent4)"></span>Video Call Integration</td>
+          <td class="desc">Deep integration with Zoom, Google Meet, and Teams to inject translated audio directly into call.</td>
+          <td class="tech">Virtual audio device (BlackHole/VB-Cable); Zoom SDK; Chrome Tab Capture API</td>
+          <td class="alt">OBS Virtual Camera + virtual mic pipeline</td>
+          <td><span class="pill pill-veryhigh">Very High</span></td>
+          <td class="notes">Chrome Tab Capture API captures tab audio without OS-level virtual device on supported platforms. Zoom SDK requires partner agreement for production use.</td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--accent5)"></span>Custom Vocabulary / Glossary</td>
+          <td class="desc">Allow users to define domain-specific terms (brand names, jargon) that should be translated consistently.</td>
+          <td class="tech">Google Cloud Translation Glossary API; DeepL Glossary API</td>
+          <td class="alt">Post-processing regex substitution; fine-tuned translation model</td>
+          <td><span class="pill pill-medium">Medium</span></td>
+          <td class="notes">Critical for medical, legal, and technical domains. Glossaries are uploaded once and referenced per-request. Both Google and DeepL support this natively.</td>
+        </tr>
+        <tr>
+          <td><span class="mod-icon" style="background:var(--muted)"></span>Analytics Dashboard</td>
+          <td class="desc">Usage metrics, error rates, latency percentiles, and per-language accuracy reporting for operators.</td>
+          <td class="tech">Grafana + Prometheus; PostHog (product analytics); Sentry (error tracking)</td>
+          <td class="alt">Datadog; New Relic; self-hosted Plausible</td>
+          <td><span class="pill pill-medium">Medium</span></td>
+          <td class="notes">Track P50/P95/P99 latency per pipeline stage. Monitor Whisper WER by language pair. Alert on translation API error rate &gt; 1%.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════
+     FOOTER
+════════════════════════════════════════════════════ -->
+<div class="footer">
+  <div class="footer-left">
+    <strong>Real-Time Speech-to-Speech Translation System</strong> &nbsp;·&nbsp;
+    System Design Document &nbsp;·&nbsp; 6 Sections &nbsp;·&nbsp; 30+ Components
+  </div>
+  <div class="legend">
+    <span class="legend-label">Complexity</span>
+    <span class="pill pill-low">Low</span>
+    <span class="pill pill-medium">Medium</span>
+    <span class="pill pill-high">High</span>
+    <span class="pill pill-veryhigh">Very High</span>
+  </div>
+</div>
+
+</body>
+</html>
